@@ -16,14 +16,17 @@
         <li>
             <div class="collapsible-header white-text light-blue"><strong>
                 {{ task.task_name }}
-            </strong> - {{ task.due_date.strftime("%d %B, %Y")  }}</div>
+                {% if task.is_urgent %}
+                <em> - URGENT!</em>
+                {% endif %}
+            </strong> - {{ task.due_date.strftime("%d %B, %Y") }}</div>
             <div class="collapsible-body">
-                <span><strong>{{ task.category }}</strong></span>
-                <span>{{ task.task_description }}</span>
-                <div class="buttons">
+                <strong>{{ task.category }}</strong>
+                <p>{{ task.task_description }}</p>
+                <p class="buttons">
                     <a href="{{ url_for('edit_task', task_id=task.id) }}" class="btn green">Update</a>
                     <a href="#delete-{{ task.id }}" class="btn red modal-trigger">Delete</a>
-                </div>
+                </p>
             </div>
         </li>
         <div id="delete-{{ task.id }}" class="modal">
