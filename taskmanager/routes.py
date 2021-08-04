@@ -6,18 +6,18 @@ from taskmanager.models import Category, Task
 @app.route("/")
 def home():
     tasks = list(Task.query.all())
-    return render_template("tasks.html")
+    return render_template("tasks.html", tasks=tasks)
 
 
 @app.route("/add_task", methods=["GET", "POST"])
-def add_category():
+def add_task():
     if request.method == "POST":
         task = Task(
             task_name=request.form.get("task_name"),
-            task_description=request.form.get("description"),
-            is_urgent=request.form.get("is_urgent"),
+            task_description=request.form.get("task_description"),
+            is_urgent=bool(True if request.form.get("is_urgent") else False),
             due_date=request.form.get("due_date"),
-            category_id=request.form.get("category"))
+            category_id=request.form.get("category_id"))
         db.session.add(task)
         db.session.commit()
         return redirect(url_for('home'))
@@ -30,11 +30,11 @@ def edit_task(task_id):
     task = Task.query.get_or_404(task_id)
     categories = list(Category.query.order_by(Category.category_name).all())
     if request.method == "POST":
-        task.task_name=request.form.get("task_name"),
-        task.task_description=request.form.get("description"),
-        task.is_urgent=request.form.get("is_urgent"),
-        task.due_date=request.form.get("due_date"),
-        task.category_id=request.form.get("category"))
+        task.task_name=request.form.get("task_name")
+        task.task_description=request.form.get("description")
+        task.is_urgent=request.form.get("is_urgent")
+        task.due_date=request.form.get("due_date")
+        task.category_id=request.form.get("category")
         db.session.commit()
         return redirect(url_for('home'))
     return render_template("edit_task.html", task=task, categories=categories)
