@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block content %}
+
+<h2>New user? Register here:</h2>
+<form class="form-signin" method="POST" action="/register">
+    <div class="form-group">
+        <label for="username">Username</label>
+        <input name="username" type="text" class="form-control" id="username" pattern=".{5,}"
+            title="Must be five or more characters" required />
+    </div>
+    <div class="form-group">
+        <label for="password">Password</label>
+        <input class="form-control" name="password" type="password" id="password" pattern=".{7,}"
+            title="Seven or more characters" required />
+    </div>
+    <div class="form-group">
+        <label for="password-repeat">Password again</label>
+        <input class="form-control" name="password-repeat" type="password" id="password-repeat" required />
+    </div>
+    <button class="btn btn-outline-success btn-lg btn-block" type="submit">
+        Sign Up
+    </button>
+</form>
+{% endblock %}

@@ -1,6 +1,36 @@
-from flask import render_template, request, redirect, url_for
+from flask import render_template, request, redirect, url_for, session
 from taskmanager import app, db
-from taskmanager.models import Category, Task
+from taskmanager.models import Category, Task, User
+# Import to secure password when storing in database
+from werkzeug.security import generate_password_hash, check_password_hash
+# Required import to create login_required decorator
+from functools import wraps
+
+
+def login_required(f):
+    """
+    Create @login_required decorator to make sure that
+    only logged-in users can access a route
+    """
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if session.get("user") is None:
+            return redirect(url_for('login', next=request.url))
+        return f(*args, **kwargs)
+    return decorated_function
+
+
+def logout_required(f):
+    """
+    Create @logout_required decorator to make sure that
+    only logged-out users can access a route such as login/register
+    """
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if session.get("user") is not None:
+            return redirect(url_for('profile'))
+        return f(*args, **kwargs)
+    return decorated_function
 
 
 @app.route("/")
@@ -10,6 +40,82 @@ def home():
     return render_template("tasks.html", tasks=tasks)
 
 
+# Authentication routes
+@app.route("/register", methods=["GET", "POST"])
+@logout_required
+def register():
+    """
+    Function to add new user and log them in
+    """
+    if request.method == "POST":
+        print("REQUESTED USERNAME: ", request.form["username"])
+        username = request.form.get("username")
+        existing_user = User.query.filter_by(username=username).first()
+        print("EXISTING USER: ", existing_user)
+        if existing_user:
+            print("Uh oh, user with that username exists!"
+                  " Did you want to log in?")
+            return redirect(url_for("login"))
+        elif request.form.get("password") != request.form.get("password-repeat"):
+            print("Oops, passwords don't match, try again!")
+            return redirect('register')
+        else:
+            # if username doesn't already exist in database and passwords match
+            hash_pass = generate_password_hash(request.form['password'])
+            user = User(username=username, password=hash_pass)
+            db.session.add(user)
+            db.session.commit()
+            user_created = User.query.filter_by(username=username).first()
+            print("Created user: ", user_created)
+            session["user"] = username
+            return redirect("profile")
+
+    return render_template("register.html")
+
+
+@app.route("/login", methods=["GET", "POST"])
+@logout_required
+def login():
+    """
+    Function to log in existing users
+    """
+    if request.method == "POST":
+        username = request.form.get("username")
+        password = request.form.get("password")
+        existing_user = User.query.filter_by(username=username).first()
+        if not existing_user:
+            print("No user with that username, please register")
+            return redirect("register")
+        elif check_password_hash(existing_user.password, password):
+            print("Wrong password, try again!")
+            return redirect("login")
+        else:  # username exist and password is correct
+            session["user"] = username
+            return redirect("profile")
+    return render_template("login.html")
+
+
+@app.route("/profile", methods=["GET", "POST"])
+@login_required
+def profile():
+    """
+    Show user's profile page when logged in
+    """
+    user = User.query.filter_by(username=session["user"]).first()
+    return render_template("profile.html", user=user)
+
+
+@app.route("/logout")
+@login_required
+def logout():
+    """
+    Log user out when logged in
+    """
+    session.clear()
+    return redirect(url_for("home"))
+
+
+# Task routes
 @app.route("/add_task", methods=["GET", "POST"])
 def add_task():
     if request.method == "POST":
@@ -49,6 +155,7 @@ def delete_task(task_id):
     return redirect(url_for("home"))
 
 
+# Category routes
 @app.route("/categories")
 def categories():
     categories = list(Category.query.order_by(Category.category_name).all())
