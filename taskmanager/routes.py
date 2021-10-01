@@ -28,16 +28,9 @@ def logout_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
         if session.get("user") is not None:
-            return redirect(url_for('profile'))
+            return redirect(url_for('home'))
         return f(*args, **kwargs)
     return decorated_function
-
-
-@app.route("/")
-def home():
-    tasks = list(Task.query.all())
-    print(tasks)
-    return render_template("tasks.html", tasks=tasks)
 
 
 # Authentication routes
@@ -68,7 +61,7 @@ def register():
             user_created = User.query.filter_by(username=username).first()
             print("Created user: ", user_created)
             session["user"] = username
-            return redirect("profile")
+            return redirect("home")
 
     return render_template("register.html")
 
@@ -91,18 +84,19 @@ def login():
             return redirect("login")
         else:  # username exist and password is correct
             session["user"] = username
-            return redirect("profile")
+            return redirect(url_for("home"))
     return render_template("login.html")
 
-
+@app.route("/", methods=["GET", "POST"])
 @app.route("/profile", methods=["GET", "POST"])
 @login_required
-def profile():
+def home():
     """
     Show user's profile page when logged in
     """
     user = User.query.filter_by(username=session["user"]).first()
-    return render_template("profile.html", user=user)
+    tasks = Task.query.filter_by(task_owner_id=user.id)
+    return render_template("profile.html", user=user, tasks=tasks)
 
 
 @app.route("/logout")
@@ -116,15 +110,20 @@ def logout():
 
 
 # Task routes
+@login_required
 @app.route("/add_task", methods=["GET", "POST"])
 def add_task():
     if request.method == "POST":
+        user = User.query.filter_by(username=session["user"]).first()
+        print(user)
         task = Task(
             task_name=request.form.get("task_name"),
             task_description=request.form.get("task_description"),
             is_urgent=bool(True if request.form.get("is_urgent") else False),
             due_date=request.form.get("due_date"),
-            category_id=request.form.get("category_id"))
+            category_id=request.form.get("category_id"),
+            task_owner_id=user.id,
+            )
         db.session.add(task)
         db.session.commit()
         return redirect(url_for('home'))
