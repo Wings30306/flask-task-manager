@@ -79,13 +79,14 @@ def login():
         if not existing_user:
             print("No user with that username, please register")
             return redirect("register")
-        elif check_password_hash(existing_user.password, password):
+        elif not check_password_hash(existing_user.password, password):
             print("Wrong password, try again!")
             return redirect("login")
         else:  # username exist and password is correct
             session["user"] = username
             return redirect(url_for("home"))
     return render_template("login.html")
+
 
 @app.route("/", methods=["GET", "POST"])
 @app.route("/profile", methods=["GET", "POST"])
@@ -110,8 +111,8 @@ def logout():
 
 
 # Task routes
-@login_required
 @app.route("/add_task", methods=["GET", "POST"])
+@login_required
 def add_task():
     if request.method == "POST":
         user = User.query.filter_by(username=session["user"]).first()
@@ -132,25 +133,32 @@ def add_task():
 
 
 @app.route("/edit_task/<int:task_id>", methods=["GET", "POST"])
+@login_required
 def edit_task(task_id):
     task = Task.query.get_or_404(task_id)
-    categories = list(Category.query.order_by(Category.category_name).all())
-    if request.method == "POST":
-        task.task_name=request.form.get("task_name")
-        task.task_description=request.form.get("task_description")
-        task.is_urgent=bool(True if request.form.get("is_urgent") else False)
-        task.due_date=request.form.get("due_date")
-        task.category_id=request.form.get("category_id")
-        db.session.commit()
-        return redirect(url_for('home'))
-    return render_template("edit_task.html", task=task, categories=categories)
+    user = User.query.filter_by(username=session["user"]).first()
+    if task.task_owner_id == user.id:
+        categories = list(Category.query.order_by(Category.category_name).all())
+        if request.method == "POST":
+            task.task_name=request.form.get("task_name")
+            task.task_description=request.form.get("task_description")
+            task.is_urgent=bool(True if request.form.get("is_urgent") else False)
+            task.due_date=request.form.get("due_date")
+            task.category_id=request.form.get("category_id")
+            db.session.commit()
+            return redirect(url_for('home'))
+        return render_template("edit_task.html", task=task, categories=categories)
+    return redirect(url_for("home"))
 
 
 @app.route("/delete_task/<int:task_id>", methods=["GET", "POST"])
+@login_required
 def delete_task(task_id):
     task = Task.query.get_or_404(task_id)
-    db.session.delete(task)
-    db.session.commit()
+    user = User.query.filter_by(username=session["user"]).first()
+    if task.task_owner_id == user.id:
+        db.session.delete(task)
+        db.session.commit()
     return redirect(url_for("home"))
 
 
