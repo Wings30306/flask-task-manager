@@ -61,7 +61,7 @@ def register():
             user_created = User.query.filter_by(username=username).first()
             print("Created user: ", user_created)
             session["user"] = username
-            return redirect("home")
+            return redirect(url_for("home"))
 
     return render_template("register.html")
 
